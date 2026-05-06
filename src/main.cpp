@@ -1,22 +1,26 @@
-#include<iostream>
-#include<vector>
-#include<unordered_map>
+#include <iostream>
+#include<thread>
+#include "Cache.h"
 using namespace std;
-template<typename KeyType , typename ValueType>
-class Cache{
-    public:
-        unordered_map<KeyType , ValueType> cache_storage;
-    public:
-        void put(const KeyType &key , const ValueType value){
-            cache_storage[key] = value;
-        }
-        ValueType get(const KeyType &key){
-            return cache_storage.at(key);
-        }
-        bool exists(const KeyType &key){
-            return cache_storage.find(key) != end();
-        }
-        void remove(const KeyType& key) {
-            cache_storage.erase(key);
-        }
-};
+
+int main()
+{
+    Cache<string, string> mc{};
+
+    mc.put("Lmao", "Hello", 1);
+
+    cout << "Stored value: " << mc.get("Lmao") << endl;
+
+    cout << "Waiting 3 seconds...\n";
+    this_thread::sleep_for(chrono::seconds(3));
+
+    if (mc.exists("Lmao"))
+    {
+        cout << "Value: " << mc.get("Lmao") << endl;
+    }
+    else
+    {
+        cout << "Key expired!" << endl;
+    }
+    return 0;
+}
