@@ -7,16 +7,26 @@ int main()
 {
     Cache<string, string> mc{};
 
-    mc.put("Lmao", "Hello", 1);
+    mc.put("Lmao", "Hello", 3);
+    mc.put("Lmao1", "Hello", 15);
 
-    cout << "Stored value: " << mc.get("Lmao") << endl;
 
     cout << "Waiting 3 seconds...\n";
-    this_thread::sleep_for(chrono::seconds(3));
+    this_thread::sleep_for(chrono::seconds(5));
+    
+    cout << "Stored value: " << mc.get("Lmao") << endl;
 
     if (mc.exists("Lmao"))
     {
         cout << "Value: " << mc.get("Lmao") << endl;
+    }
+    else
+    {
+        cout << "Key expired!" << endl;
+    }
+    if (mc.exists("Lmao1"))
+    {
+        cout << "Value: " << mc.get("Lmao1") << endl;
     }
     else
     {

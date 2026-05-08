@@ -2,19 +2,23 @@
 #define CACHE_HPP
 
 #include <unordered_map>
+#include <queue>
 #include <chrono>
-
 template <typename Value>
 struct CacheItem
 {
     Value value;
     std::chrono::steady_clock::time_point expiry;
 };
-
 template <typename KeyType, typename ValueType>
 class Cache
 {
 private:
+    std::priority_queue<
+        std::pair<std::chrono::steady_clock::time_point, KeyType>,
+        std::vector<std::pair<std::chrono::steady_clock::time_point, KeyType>>,
+        std::greater<std::pair<std::chrono::steady_clock::time_point, KeyType>>>
+        pq;
     std::unordered_map<KeyType, CacheItem<ValueType>> m_cache_storage;
 
 public:
@@ -31,7 +35,7 @@ public:
         {
             item.expiry = std::chrono::steady_clock::now() + std::chrono::seconds(expiry);
         }
-
+        pq.push({item.expiry, key});
         m_cache_storage[key] = item;
     }
 
@@ -47,9 +51,18 @@ public:
         if (std::chrono::steady_clock::now() >= it->second.expiry)
         {
             m_cache_storage.erase(it);
+            pq.pop();
             return ValueType{};
         }
+        auto remaining = std::chrono::duration_cast<std::chrono::seconds>(
+                             pq.top().first - std::chrono::steady_clock::now())
+                             .count();
 
+        std::cout << "\nheap values "
+                  << remaining
+                  << "s "
+                  << pq.top().second
+                  << std::endl;
         return it->second.value;
     }
 
@@ -70,7 +83,26 @@ public:
 
         return true;
     }
+    bool periodicClean()
+    {
+        std::pair<std::chrono::steady_clock::time_point, KeyType> minele = {pq.top().first, pq.top().second};
+        if (minele.first <= std::chrono::steady_clock::now())
+        {
+            std::cout << "cleaned key " << minele.second << std::endl;
+            pq.pop();
 
+            auto it = m_cache_storage.find(minele.second);
+
+            // Lazy deletion check
+            if (it != m_cache_storage.end() &&
+                it->second.expiry == minele.first)
+            {
+                m_cache_storage.erase(it);
+                return true;
+            }
+        }
+        return false;
+    }
     void remove(const KeyType &key)
     {
         m_cache_storage.erase(key);
