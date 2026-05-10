@@ -1,35 +1,15 @@
 #include <iostream>
-#include<thread>
 #include "Cache.h"
-using namespace std;
-
+#include<string>
 int main()
 {
-    Cache<string, string> mc{};
+    Cache<int , int> mc;
+    mc.put(1, 2 , 100); // key 1 value 2 expiry 100seconds auto = no exipiration
+    mc.put(2, 4); // no expiration
+    mc.get(1);
+    mc.get(2);
+    mc.cleanExpired(); // manually clean expired keys from heap
+    Cache<std::string , int> mc1(true , 10); // auto cleaning expired keys every 10 seconds -> flag to turn on auto clean , interval
 
-    mc.put("Lmao", "Hello", 3);
-    mc.put("Lmao1", "Hello");
-
-    cout << "Waiting 5 seconds...\n";
-    this_thread::sleep_for(chrono::seconds(5));
-    
-    cout << "Stored value: " << mc.get("Lmao") << endl;
-
-    if (mc.exists("Lmao"))
-    {
-        cout << "Value: " << mc.get("Lmao") << endl;
-    }
-    else
-    {
-        cout << "Key expired!" << endl;
-    }
-    if (mc.exists("Lmao1"))
-    {
-        cout << "Value: " << mc.get("Lmao1") << endl;
-    }
-    else
-    {
-        cout << "Key expired!" << endl;
-    }
     return 0;
 }

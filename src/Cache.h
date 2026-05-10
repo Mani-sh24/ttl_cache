@@ -4,6 +4,8 @@
 #include <unordered_map>
 #include <queue>
 #include <chrono>
+#include <thread>
+#include <atomic>
 template <typename Value>
 struct CacheItem
 {
@@ -15,6 +17,11 @@ class Cache
 {
 private:
     std::mutex mtx;
+    std::thread cleanerThread;
+    std::atomic<bool> running{false};
+    int cleanerInterval = 5;
+
+private:
     std::priority_queue<
         std::pair<std::chrono::steady_clock::time_point, KeyType>,
         std::vector<std::pair<std::chrono::steady_clock::time_point, KeyType>>,
@@ -22,7 +29,40 @@ private:
         pq;
     std::unordered_map<KeyType, CacheItem<ValueType>> m_cache_storage;
 
+private:
+     void periodicClean()
+    {
+        auto nextRun = std::chrono::steady_clock::now();
+
+        while (running)
+        {
+            cleanExpired();
+
+            nextRun += std::chrono::seconds(cleanerInterval);
+            std::this_thread::sleep_until(nextRun);
+        }
+    }
+
 public:
+    Cache(bool autoCleanup = false, int intervalSeconds = 5)
+    {
+        cleanerInterval = intervalSeconds;
+
+        if (autoCleanup)
+        {
+            startCleaner();
+        }
+    }
+
+    void startCleaner()
+    {
+        if (running.exchange(true))
+        {
+            return;
+        }
+
+        cleanerThread = std::thread(&Cache::periodicClean, this);
+    }
     void put(const KeyType &key, const ValueType &value, int expiry = -1)
     {
         std::lock_guard<std::mutex> lock(mtx);
@@ -83,11 +123,11 @@ public:
         while (!pq.empty())
         {
             std::pair<std::chrono::steady_clock::time_point, KeyType> minele = {pq.top().first, pq.top().second};
-            if (minele.first >= std::chrono::steady_clock::now())
+            if (minele.first > std::chrono::steady_clock::now())
             {
                 break;
             }
-            std::cout << "cleaned key " << minele.second << std::endl;
+            // std::cout << "cleaned key " << minele.second << std::endl;
             pq.pop();
 
             auto it = m_cache_storage.find(minele.second);
@@ -100,10 +140,23 @@ public:
             }
         }
     }
+    void stopCleaner()
+    {
+        running = false;
+
+        if (cleanerThread.joinable())
+        {
+            cleanerThread.join();
+        }
+    }
     void remove(const KeyType &key)
     {
         std::lock_guard<std::mutex> lock(mtx);
         m_cache_storage.erase(key);
+    }
+    ~Cache()
+    {
+        stopCleaner();
     }
 };
 
